@@ -10,10 +10,15 @@
  */
 package com.amazon.dlic.auth.http.jwt.keybyoidc;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.io.BaseEncoding;
+
+import io.jsonwebtoken.Jwts;
+
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -260,6 +265,43 @@ public class HTTPJwtKeyByOpenIdConnectAuthenticatorTest {
         Assert.assertNotNull(creds);
         assertThat(creds.getUsername(), is(TestJwts.MCCOY_SUBJECT));
         assertThat(creds.getBackendRoles(), is(TestJwts.TEST_ROLES));
+    }
+
+    @Test
+    public void testRolesInNestedClaim() throws Exception {
+        Settings settings = Settings.builder()
+            .put("openid_connect_url", mockIdpServer.getDiscoverUri())
+            .put("roles_pointer", "/realm_access/roles")
+            .put("required_issuer", TestJwts.TEST_ISSUER)
+            .put("required_audience", TestJwts.TEST_AUDIENCE)
+            .build();
+
+        HTTPJwtKeyByOpenIdConnectAuthenticator jwtAuth = new HTTPJwtKeyByOpenIdConnectAuthenticator(settings, null);
+
+
+        Jwts.builder().subject("Leonard McCoy").claim("realm_access", Collections.singletonMap("roles", new String[] { "role1", "role2" }));
+
+        TestcreateSigned
+
+        String token = TestJwts.createSigned()
+
+        Jwts.builder().subject("Leonard McCoy").claim("realm_access", Collections.singletonMap("roles", new String[] { "role1", "role2" })).signWith(TestJwts.
+
+        AuthCredentials creds = jwtAuth.extractCredentials(
+            new FakeRestRequest(ImmutableMap.of("Authorization", , new HashMap<String, String>())
+                .asSecurityRequest(),
+            null
+        );
+
+        final AuthCredentials credentials = extractCredentialsFromJwtHeader(
+                Settings.builder().put("signing_key", BaseEncoding.base64().encode(secretKeyBytes)).put("roles_pointer",
+                        "/realm_access/roles"),
+                Jwts.builder().subject("Leonard McCoy").claim("realm_access", Collections.singletonMap("roles", new String[] { "role1", "role2" })));
+
+        Assert.assertNotNull(credentials);
+        assertThat(credentials.getUsername(), is("Leonard McCoy"));
+        assertThat(credentials.getBackendRoles().size(), is(2));
+        assertThat(credentials.getBackendRoles(), containsInAnyOrder("role1", "role2"));
     }
 
     @Test

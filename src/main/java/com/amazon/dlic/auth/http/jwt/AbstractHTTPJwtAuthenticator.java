@@ -62,6 +62,7 @@ public abstract class AbstractHTTPJwtAuthenticator implements HTTPAuthenticator 
     private final String jwtUrlParameter;
     private final String subjectKey;
     private final String rolesKey;
+    private final String rolesPointer;
     private final List<String> requiredAudience;
     private final String requiredIssuer;
 
@@ -73,6 +74,7 @@ public abstract class AbstractHTTPJwtAuthenticator implements HTTPAuthenticator 
         jwtHeaderName = settings.get("jwt_header", AUTHORIZATION);
         isDefaultAuthHeader = AUTHORIZATION.equalsIgnoreCase(jwtHeaderName);
         rolesKey = settings.get("roles_key");
+        rolesPointer = settings.get("roles_pointer");
         subjectKey = settings.get("subject_key");
         clockSkewToleranceSeconds = settings.getAsInt("jwt_clock_skew_tolerance_seconds", DEFAULT_CLOCK_SKEW_TOLERANCE_SECONDS);
         requiredAudience = settings.getAsList("required_audience");
@@ -145,7 +147,14 @@ public abstract class AbstractHTTPJwtAuthenticator implements HTTPAuthenticator 
             return null;
         }
 
-        final String[] roles = extractRoles(claimsSet);
+        final String[] roles;
+        if (rolesKey != null) {
+            roles = extractRoles(claimsSet);
+        } else if (rolesPointer != null) {
+            roles = JWTUtils.extractRolesByPointer(claimsSet.getClaims(), rolesPointer);
+        } else {
+            roles = new String[0];
+        }
         final AuthCredentials ac = new AuthCredentials(subject, roles).markComplete();
 
         for (Entry<String, Object> claim : claimsSet.getClaims().entrySet()) {

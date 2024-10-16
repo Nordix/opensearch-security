@@ -60,6 +60,7 @@ public class HTTPJwtAuthenticator implements HTTPAuthenticator {
     private final boolean isDefaultAuthHeader;
     private final String jwtUrlParameter;
     private final String rolesKey;
+    private final String rolesPointer;
     private final String subjectKey;
     private final List<String> requiredAudience;
     private final String requireIssuer;
@@ -74,6 +75,7 @@ public class HTTPJwtAuthenticator implements HTTPAuthenticator {
         jwtHeaderName = settings.get("jwt_header", AUTHORIZATION);
         isDefaultAuthHeader = AUTHORIZATION.equalsIgnoreCase(jwtHeaderName);
         rolesKey = settings.get("roles_key");
+        rolesPointer = settings.get("roles_pointer");
         subjectKey = settings.get("subject_key");
         requiredAudience = settings.getAsList("required_audience");
         requireIssuer = settings.get("required_issuer");
@@ -167,7 +169,7 @@ public class HTTPJwtAuthenticator implements HTTPAuthenticator {
         for (JwtParser jwtParser : jwtParsers) {
             try {
 
-                final Claims claims = jwtParser.parseClaimsJws(jwtToken).getBody();
+                final Claims claims = jwtParser.parseSignedClaims(jwtToken).getPayload();
 
                 if (!requiredAudience.isEmpty()) {
                     assertValidAudienceClaim(claims);
@@ -180,7 +182,14 @@ public class HTTPJwtAuthenticator implements HTTPAuthenticator {
                     return null;
                 }
 
-                final String[] roles = extractRoles(claims, request);
+                final String[] roles;
+                if (rolesKey != null) {
+                    roles = extractRoles(claims, request);
+                } else if (rolesPointer != null) {
+                    roles = JWTUtils.extractRolesByPointer(claims, rolesPointer);
+                } else {
+                    roles = new String[0];
+                }
 
                 final AuthCredentials ac = new AuthCredentials(subject, roles).markComplete();
 

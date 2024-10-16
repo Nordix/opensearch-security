@@ -40,6 +40,7 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -264,6 +265,20 @@ public class HTTPJwtAuthenticatorTest {
         Assert.assertNotNull(credentials);
         assertThat(credentials.getUsername(), is("Leonard McCoy"));
         assertThat(credentials.getBackendRoles().size(), is(2));
+    }
+
+    @Test
+    public void testRolesInNestedClaim() throws Exception {
+        final AuthCredentials credentials = extractCredentialsFromJwtHeader(
+                Settings.builder().put("signing_key", BaseEncoding.base64().encode(secretKeyBytes)).put("roles_pointer",
+                        "/realm_access/roles"),
+                Jwts.builder().subject("Leonard McCoy").claim("realm_access",
+                        Collections.singletonMap("roles", new String[] { "role1", "role2" })));
+
+        Assert.assertNotNull(credentials);
+        assertThat(credentials.getUsername(), is("Leonard McCoy"));
+        assertThat(credentials.getBackendRoles().size(), is(2));
+        assertThat(credentials.getBackendRoles(), containsInAnyOrder("role1", "role2"));
     }
 
     @Test
